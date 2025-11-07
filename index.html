@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSnap Insight 🌿</title>
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .app-container {
+            background: #1e1e1e;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 { color: #2ecc71; margin: 0 0 10px 0; }
+        p.subtitle { color: #aaa; margin-bottom: 2rem; }
+        
+        .input-section { display: flex; gap: 10px; margin-bottom: 2rem; }
+        input {
+            flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #333;
+            background: #2d2d2d; color: white; font-size: 16px;
+        }
+        button {
+            padding: 12px 24px; background: #27ae60; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;
+        }
+        button:hover { background: #219150; }
+        button:disabled { background: #555; cursor: not-allowed; }
+
+        .result-box {
+            background: #2d2d2d; padding: 1.5rem; border-radius: 12px;
+            animation: fadeIn 0.5s ease-out; display: none; /* Hidden by default */
+        }
+        .stat-grid { display: flex; gap: 15px; margin-top: 1.5rem; }
+        .stat-card {
+            flex: 1; background: #383838; padding: 1rem; border-radius: 10px;
+        }
+        .stat-card h3 { margin: 0; font-size: 0.9rem; color: #bbb; }
+        .stat-card p { margin: 5px 0 0 0; font-size: 1.5rem; font-weight: bold; }
+        .co2 { color: #e74c3c; }
+        .recycle { color: #3498db; }
+        .impact-badge {
+            margin-top: 20px; padding: 8px; border-radius: 6px; font-weight: bold;
+        }
+        .error { color: #e74c3c; background: rgba(231, 76, 60, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 1rem; display: none; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <h1>🌿 EcoSnap Insight</h1>
+        <p class="subtitle">Check the real-world impact of your waste.</p>
+
+        <div class="input-section">
+            <input type="text" id="materialInput" placeholder="e.g., Plastic, Glass, Paper" />
+            <button id="checkBtn" onclick="checkImpact()">Check Impact</button>
+        </div>
+
+        <div id="errorBox" class="error"></div>
+
+        <div id="resultBox" class="result-box">
+            <h2 id="resMaterial">Results for ...</h2>
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <h3>☁️ CO₂ Emissions</h3>
+                    <p class="co2"><span id="resCo2">-</span> kg</p>
+                </div>
+                <div class="stat-card">
+                    <h3>♻️ Recyclability</h3>
+                    <p class="recycle"><span id="resRecycle">-</span>%</p>
+                </div>
+            </div>
+            <div id="resBadge" class="impact-badge"></div>
+        </div>
+    </div>
+
+    <script>
+        async function checkImpact() {
+            const material = document.getElementById('materialInput').value;
+            const btn = document.getElementById('checkBtn');
+            const errorBox = document.getElementById('errorBox');
+            const resultBox = document.getElementById('resultBox');
+
+            if (!material.trim()) return;
+
+            // Reset UI
+            btn.innerText = 'Thinking...'; btn.disabled = true;
+            errorBox.style.display = 'none'; resultBox.style.display = 'none';
+
+            try {
+                // Call your local Python backend
+                const response = await fetch('http://127.0.0.1:8000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ material: material })
+                });
+
+                if (!response.ok) throw new Error('Backend error or material not found');
+                const data = await response.json();
+
+                // Update UI with results
+                document.getElementById('resMaterial').innerText = `Results for ${data.input_material}`;
+                document.getElementById('resCo2').innerText = data.co2_emissions_kg;
+                document.getElementById('resRecycle').innerText = Math.round(data.recyclability_score * 100);
+                
+                const badge = document.getElementById('resBadge');
+                badge.innerText = `Overall Impact: ${data.impact_rating}`;
+                badge.style.backgroundColor = data.impact_rating === 'High' ? '#c0392b' : '#27ae60';
+                
+                resultBox.style.display = 'block';
+
+            } catch (err) {
+                errorBox.innerText = '⚠️ ' + err.message;
+                errorBox.style.display = 'block';
+            } finally {
+                btn.innerText = 'Check Impact'; btn.disabled = false;
+            }
+        }
+
+        // Allow pressing 'Enter' to submit
+        document.getElementById('materialInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkImpact();
+        });
+    </script>
+</body>
+</html>
