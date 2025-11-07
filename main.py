@@ -38,7 +38,9 @@ def home():
 def predict_impact(data: WasteInput):
     try:
         # 1. Convert incoming JSON to a pandas DataFrame (what the model expects)
-        input_df = pd.DataFrame({'Material': [data.material]})
+        # Strips spaces and Capitalizes first letters (e.g., " plastic " -> "Plastic")
+        cleaned_material = data.material.strip().title()
+        input_df = pd.DataFrame({'Material': [cleaned_material]})
 
         # 2. Run prediction
         # Result is an array: [[co2, recyclability, total_score]]
